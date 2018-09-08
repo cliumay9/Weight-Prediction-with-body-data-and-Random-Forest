@@ -1,0 +1,222 @@
+---
+title: "R Notebook: Random Forest with Body data"
+output: html_notebook
+---
+
+In this project we will be exploring realtionship between weight and other physical attributes (i.e. wrist grith, chest diameter and etc.) with random forest, as well as finding important predictors. Also, we are predicting a person's weight.
+
+## Solution
+
+```{r}
+# install.packages('randomForest')
+library(randomForest)
+```
+
+```{r}
+load("./data/body.Rdata")
+```
+
+Split data into test and train. Get rid of Age, Height and gender with -c(1,3,4)
+
+```{r}
+set.seed(123)
+
+test =sample(1:nrow(X),200)
+train = (-test)
+df = as.data.frame(cbind(Y,X))
+df=df[,-c(1,3,4)]
+```
+
+Bagging
+
+```{r}
+# set mtry = ncol(X)
+
+bag.Weight =randomForest(Weight ~ .,data=df ,subset=train, xtest=df[test,-1], ytest=df[test,1], mtry=ncol(X), importance =TRUE)
+```
+
+
+Random Forest
+
+```{r}
+rf.Weight =randomForest(Weight ~ .,data=df ,subset=train, xtest=df[test,-1], ytest=df[test,1], importance =TRUE)
+```
+
+
+(a)
+
+Produce a plot of test MSE as a function of number of trees for Bagging and Random Forests.
+
+
+```{r}
+plot(1, type="n", xlab="Number of Trees", ylab="Error", xlim=c(0, 500), ylim=c(8, 30), main = "Body Data Set : Test MSE")
+lines(1:500, rf.Weight$test$mse, col="red")
+lines(1:500, bag.Weight$test$mse, col="blue")
+legend("topright", c("Random Forest", "Bagging"), col=c("red", "blue"), lwd=2, cex=.7)
+```
+
+
+(b)
+
+Which variable does your random forest identify as most important? How do they compare with the most important variables as identified by Bagging?
+
+```{r}
+# Plotting %IncMSE 
+plot(bag.Weight$importance[,1], xaxt='n', xlab="", ylab="% Increase MSE", pch=19, col="blue", main="% Increase in MSE")
+points(rf.Weight$importance[,1], pch=19, col="red")
+abline(v=(seq(0,21,1)), col="lightgray", lty="dotted")
+axis(1, at=1:21, labels=names(X), tick=FALSE, las=2, line=-0.5, cex.axis=0.7)
+legend("topright", c("Random Forest", "Bagging"), col=c("red", "blue"), pch=19, cex=.7)
+```
+
+
+```{r}
+# Node purity relates to the loss function which by best splits are chosen. Loss function for regression and classification are mse and gini-impurity, respectively.
+
+plot(bag.Weight$importance[,2], xaxt='n', xlab="", ylab="Increase", pch=19, col="blue",
+     main="Increase in Node Purity")
+points(rf.Weight$importance[,2], pch=19, col="red")
+abline(v=(seq(0,21,1)), col="lightgray", lty="dotted")
+axis(1, at=1:21, labels=names(X), tick=FALSE, las=2, line=-0.5, cex.axis=0.7)
+legend("topright", c("Random Forest", "Bagging"), col=c("red", "blue"), pch=19, cex=.7)
+```
+
+Ramdom Forest - most important variable
+- Waist.Girth, Chest.Girth, Forearm.Girth, Shoulder.Girth
+
+```{r}
+# % inc mse/ Node Purity
+which.max(rf.Weight$importance[,1])
+which.max(rf.Weight$importance[,2])
+```
+
+```{r}
+c= which.max(rf.Weight$importance[,1])
+d = which.max(rf.Weight$importance[,2])
+which.max(rf.Weight$importance[-c,1])
+which.max(rf.Weight$importance[-d,2])
+```
+
+```{r}
+c = c(c, which.max(rf.Weight$importance[-c,1]))
+d = c(d, which.max(rf.Weight$importance[-d,2]))
+which.max(rf.Weight$importance[-c,1])
+which.max(rf.Weight$importance[-d,2])
+```
+
+```{r}
+c = c(c, which.max(rf.Weight$importance[-c,1]))
+d = c(d, which.max(rf.Weight$importance[-d,2]))
+which.max(rf.Weight$importance[-c,1])
+which.max(rf.Weight$importance[-d,2])
+```
+
+
+Bagging - most important variable
+ - Waist Girth, Chest Girth, Shoulder Girth, Hip Girth/Calf Girth 
+
+```{r}
+# % inc mse/ Node Purity
+which.max(bag.Weight$importance[,1])
+which.max(bag.Weight$importance[,2])
+
+c= which.max(bag.Weight$importance[,1])
+d= which.max(bag.Weight$importance[,2])
+```
+
+```{r}
+which.max(bag.Weight$importance[-c,1])
+which.max(bag.Weight$importance[-d,2])
+
+c = c(c, which.max(bag.Weight$importance[-c,1]))
+d = c(d, which.max(bag.Weight$importance[-d,2]))
+```
+
+
+```{r}
+which.max(bag.Weight$importance[-c,1])
+which.max(bag.Weight$importance[-d,2])
+
+c = c(c, which.max(bag.Weight$importance[-c,1]))
+d = c(d, which.max(bag.Weight$importance[-d,2]))
+```
+
+```{r}
+which.max(bag.Weight$importance[-c,1])
+which.max(bag.Weight$importance[-d,2])
+
+```
+
+Random Forest and Bagging decide Waist.Girth, Chest.Girth are the two most important variable. Random considers Forearm.Girth is important while Bagging doesn't. Random Forest treats Shoulder.Girth are more important than Bagging does. Bagging %incMSE and IncNodePurity decide Hip Girth and Calf Grith are important, respectively.
+
+(c)
+
+Compare the test error of your random forest (with 500 trees) against the test error you evaluated in problem 4(f) iin HW3. Does your random forest make better predictions than your predicitons from HW3.
+
+From HW3's 4(f), PCR's test error is 7.789282; PLS's test error is 7.506377; LASSO's test error is 7.290936. 
+
+Now lets perform Random Forest with ntree = 500.
+
+```{r}
+rf500.Weight = randomForest(Weight ~ .,data=df,subset=train, ntree = 500, importance =TRUE)
+
+# rf500.Weight = randomForest(Weight ~ .,data=df,subset=train, xtest=df[test,-1], ytest=df[test,1], ntree = 500, importance =TRUE)
+```
+
+```{r}
+rf500.pred = predict(object  = rf500.Weight, newdata = df[test,-1], type="response")
+```
+
+
+Calculate MSE for random forest of 500 trees.
+
+```{r}
+mean((rf500.pred - df[test,1])^2)
+```
+
+Random Forest 500 trees, 9.99143, is larger than PCR, PLS, and LASSO's test errors.
+
+(d)
+
+No it wouldn't be valuable to include more trees as improvement from bagging more trees will not be significant.
+In general, as we increase number of trees in randomforest, our performance increases because of variance reduction. Yet, as we include more tree, we are increasing our chance to select the same set of variables during "feature bagging" - which won't decrease MSE that much. 
+
+```{r}
+rf7.Weight = randomForest(Weight ~ .,data=df,subset=train, ntree = floor(ncol(X)/3), importance =TRUE)
+rf1000.Weight = randomForest(Weight ~ .,data=df,subset=train, ntree = 10000, importance =TRUE)
+rf5000.Weight = randomForest(Weight ~ .,data=df,subset=train, ntree = 5000, importance =TRUE)
+```
+
+
+```{r}
+rf7.pred = predict(object  = rf7.Weight, newdata = df[test,-1], type="response")
+rf1000.pred = predict(object  = rf1000.Weight, newdata = df[test,-1], type="response")
+rf5000.pred = predict(object  = rf5000.Weight, newdata = df[test,-1], type="response")
+```
+
+
+Calculate MSE for random forest of 7 trees.
+
+```{r}
+mean((rf7.pred - df[test,1])^2)
+```
+
+Calculate MSE for random Forest of 500 trees.
+
+```{r}
+mean((rf500.pred - df[test,1])^2)
+```
+
+Calculate MSE for randm forest of 1000 trees.
+
+```{r}
+mean((rf1000.pred - df[test,1])^2)
+```
+
+Calculate MSE for random forest of 5000 trees.
+
+```{r}
+mean((rf5000.pred - df[test,1])^2)
+```
+
+MSE for random forest of 500 trees (9.766769) is smaller than both MSEs for random forest of 7 trees, 1000 and 5000 trees (9.859593, 9.930397 and 12.22133, respectively). For this reason, increasing 4500 trees wont be valuable as it overfits; decreasing number of trees to 7 is efficient coz its MSE is 12.02819. 
